@@ -12,7 +12,7 @@ testing backend for test frontend next
 $ npm install
 
 #generate component with resource
-$ nest g r <component-name>
+$ nest g resource <component-name>
 ```
 
 ## Compile and run the project
