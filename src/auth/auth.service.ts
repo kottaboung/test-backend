@@ -39,6 +39,7 @@ export class AuthService {
 
   private async getTokens(userId: number, email: string, role: string) {
     const payload = { sub: userId, email, role };
+    console.log('Generated Payload:', payload);
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
         secret: process.env.JWT_SECRET,
