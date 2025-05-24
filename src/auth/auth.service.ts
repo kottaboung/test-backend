@@ -4,13 +4,52 @@ import { RegisterDto } from './dto/register.dto';
 import * as bcrypt from 'bcrypt';
 import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { OAuth2Client } from 'google-auth-library';
+import { Role } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
+  private googleClient = new OAuth2Client('1051415159450-ih46h07jqfflucaqh7mjhi25pmgfj2vg.apps.googleusercontent.com');
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService  
   ) {}
+
+  async loginWithGoogle(idToken: string) {
+    const ticket = await this.googleClient.verifyIdToken({
+      idToken,
+      audience: '1051415159450-ih46h07jqfflucaqh7mjhi25pmgfj2vg.apps.googleusercontent.com',
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email) {
+      throw new UnauthorizedException('Invalid Google token');
+    }
+
+    const { email, name, picture } = payload;
+
+    let user = await this.prisma.user.findUnique({ where: { email } });
+    if(!user) {
+      user = await this.prisma.user.create({
+        data: {
+          name: name || '',
+          email,
+          passwordHash: '',
+          profileImage: picture || null,
+          role: Role.USER, 
+        },
+      });
+    }
+
+    const tokens = await this.getTokens(user.id, user.email, user.role);
+
+    return {
+      tokens,
+      user,
+    };
+  }
 
   async refreshTokens(userId: number, refreshToken: string) {
   const user = await this.prisma.user.findUnique({
@@ -69,7 +108,7 @@ export class AuthService {
         name: dto.name,
         email: dto.email,
         passwordHash: hash,
-        role: 'USER'
+        role: Role.USER,
       }
     });
 
@@ -117,6 +156,32 @@ export class AuthService {
         ...tokens,
       };
     }
+
+    async updateProfile(userId: number, dto: UpdateProfileDto) {
+      if (!userId) {
+        throw new UnauthorizedException('UserId is missing');
+      }
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('User not found');
+      }
+
+      const updatedUser = await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          name: dto.name ?? user.name,
+          email: dto.email ?? user.email,
+          profileImage: dto.profileImage ?? user.profileImage,
+        },
+      });
+
+      const { passwordHash, refreshToken, ...safeUser } = updatedUser;
+      return safeUser;
+    }
+
 
     async logout(userId: number) {
       await this.prisma.user.update({

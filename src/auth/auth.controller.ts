@@ -5,10 +5,17 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { ApiBearerAuth } from '@nestjs/swagger';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { LoginGoogleDto } from './dto/login-google.dto';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @Post('google')
+  async loginWithGoogle(@Body() dto: LoginGoogleDto) {
+    return this.authService.loginWithGoogle(dto.idToken);
+  }
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')
@@ -33,9 +40,20 @@ export class AuthController {
     return this.authService.refreshTokens(dto.userId, dto.refreshToken);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @Patch('profile')
+  updateProfile(@Req() req, @Body() dto: UpdateProfileDto) {
+    console.log('UserId:', req.user?.sub);
+    return this.authService.updateProfile(req.user.sub, dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
   @Post('logout')
-  logout(@Body('userId') userId: number) {
-    return this.authService.logout(userId);
+  logout(@Req() req) {
+    console.log(req.user?.sub);
+    return this.authService.logout(req.user.sub);
   }
 
 }
