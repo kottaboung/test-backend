@@ -6,10 +6,16 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { LoginGoogleDto } from './dto/login-google.dto';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @Post('google')
+  async loginWithGoogle(@Body() dto: LoginGoogleDto) {
+    return this.authService.loginWithGoogle(dto.idToken);
+  }
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')
