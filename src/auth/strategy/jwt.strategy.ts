@@ -25,7 +25,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       }
 
       const { passwordHash, refreshToken, ...result } = user;
-      return result;
+      return {
+        ...result,
+        sub: user.id,
+        email: user.email,
+        role: user.role,
+      };
 
     } catch (error) {
       console.error('JWT Validate Error:', error);

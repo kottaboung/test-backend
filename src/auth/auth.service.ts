@@ -4,6 +4,7 @@ import { RegisterDto } from './dto/register.dto';
 import * as bcrypt from 'bcrypt';
 import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @Injectable()
 export class AuthService {
@@ -117,6 +118,32 @@ export class AuthService {
         ...tokens,
       };
     }
+
+    async updateProfile(userId: number, dto: UpdateProfileDto) {
+      if (!userId) {
+        throw new UnauthorizedException('UserId is missing');
+      }
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('User not found');
+      }
+
+      const updatedUser = await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          name: dto.name ?? user.name,
+          email: dto.email ?? user.email,
+          profileImage: dto.profileImage ?? user.profileImage,
+        },
+      });
+
+      const { passwordHash, refreshToken, ...safeUser } = updatedUser;
+      return safeUser;
+    }
+
 
     async logout(userId: number) {
       await this.prisma.user.update({
